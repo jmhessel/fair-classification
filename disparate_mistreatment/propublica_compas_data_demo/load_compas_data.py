@@ -42,7 +42,7 @@ def load_compas_data():
 	FEATURES_CLASSIFICATION = ["age_cat", "race", "sex", "priors_count", "c_charge_degree"] #features to be used for classification
 	CONT_VARIABLES = ["priors_count"] # continuous features, will need to be handled separately from categorical features, categorical features will be encoded using one-hot
 	CLASS_FEATURE = "two_year_recid" # the decision variable
-	SENSITIVE_ATTRS = ["race"]
+	SENSITIVE_ATTRS = ["race", "sex"]
 
 
 	COMPAS_INPUT_FILE = "compas-scores-two-years.csv"
