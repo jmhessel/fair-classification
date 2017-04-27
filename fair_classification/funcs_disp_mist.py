@@ -132,46 +132,27 @@ def train_model_disp_mist(x, y, x_control, loss_function, EPS, cons_params=None)
 
 def get_clf_stats(w, x_train, y_train, x_control_train, x_test, y_test, x_control_test, sensitive_attrs):
 
-
-
-    
-    assert(len(sensitive_attrs) == 1) # ensure that we have just one sensitive attribute
-    s_attr = sensitive_attrs[0] # for now, lets compute the accuracy for just one sensitive attr
-
-
-    # compute distance from boundary
-    distances_boundary_train = get_distance_boundary(w, x_train, x_control_train[s_attr])
-    distances_boundary_test = get_distance_boundary(w, x_test, x_control_test[s_attr])
-
+    # compute distances to boundaries
+    distances_boundary_train = get_distance_boundary(w, x_train, None)
+    distances_boundary_test = get_distance_boundary(w, x_test, None)
+        
     # compute the class labels
     all_class_labels_assigned_train = np.sign(distances_boundary_train)
     all_class_labels_assigned_test = np.sign(distances_boundary_test)
 
-
     train_score, test_score, correct_answers_train, correct_answers_test = ut.check_accuracy(None, x_train, y_train, x_test, y_test, all_class_labels_assigned_train, all_class_labels_assigned_test)
-
     
     cov_all_train = {}
     cov_all_test = {}
+    print "\n"
+    print "Overall Accuracy: %0.3f" % (test_score)
     for s_attr in sensitive_attrs:
-        
-        
-        print_stats = False # we arent printing the stats for the train set to avoid clutter
-
-        # uncomment these lines to print stats for the train fold
-        # print "*** Train ***"
-        # print "Accuracy: %0.3f" % (train_score)
-        # print_stats = True
-        s_attr_to_fp_fn_train = get_fpr_fnr_sensitive_features(y_train, all_class_labels_assigned_train, x_control_train, sensitive_attrs, print_stats)
+        s_attr_to_fp_fn_train = get_fpr_fnr_sensitive_features(y_train, all_class_labels_assigned_train, x_control_train, sensitive_attrs, False)
         cov_all_train[s_attr] = get_sensitive_attr_constraint_fpr_fnr_cov(None, x_train, y_train, distances_boundary_train, x_control_train[s_attr]) 
         
-
-        print "\n"
-        print "Accuracy: %0.3f" % (test_score)
         print_stats = True # only print stats for the test fold
-        s_attr_to_fp_fn_test = get_fpr_fnr_sensitive_features(y_test, all_class_labels_assigned_test, x_control_test, sensitive_attrs, print_stats)
-        cov_all_test[s_attr] = get_sensitive_attr_constraint_fpr_fnr_cov(None, x_test, y_test, distances_boundary_test, x_control_test[s_attr]) 
-        print "\n"
+        s_attr_to_fp_fn_test = get_fpr_fnr_sensitive_features(y_test, all_class_labels_assigned_test, x_control_test, sensitive_attrs, False)
+        cov_all_test[s_attr] = get_sensitive_attr_constraint_fpr_fnr_cov(None, x_test, y_test, distances_boundary_test, x_control_test[s_attr])
 
     return train_score, test_score, cov_all_train, cov_all_test, s_attr_to_fp_fn_train, s_attr_to_fp_fn_test
 
