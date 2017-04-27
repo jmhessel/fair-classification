@@ -120,9 +120,8 @@ def train_model_disp_mist(x, y, x_control, loss_function, EPS, cons_params=None)
 
     # check that the fairness constraint is satisfied
     for f_c in constraints:
-        assert(f_c.value == True)
-        pass
-        
+        if f_c.value == False:
+            print("Warning, constraint not satisfied!")
 
     w = np.array(w.value).flatten() # flatten converts it to a 1d array
 
@@ -144,6 +143,7 @@ def get_clf_stats(w, x_train, y_train, x_control_train, x_test, y_test, x_contro
     
     cov_all_train = {}
     cov_all_test = {}
+
     print "\n"
     print "Overall Accuracy: %0.3f" % (test_score)
     for s_attr in sensitive_attrs:
@@ -181,6 +181,7 @@ def get_constraint_list_cov(x_train, y_train, x_control_train, sensitive_attrs_t
     cons_type == 0: means the whole combined misclassification constraint (without FNR or FPR)
     cons_type == 1: FPR constraint
     cons_type == 2: FNR constraint
+    cons_type == 3: combined misclassification constraint, FPR, and FNR
     cons_type == 4: both FPR as well as FNR constraints
 
     sensitive_attrs_to_cov_thresh: is a dict like {s: {cov_type: val}}
@@ -190,7 +191,6 @@ def get_constraint_list_cov(x_train, y_train, x_control_train, sensitive_attrs_t
 
     constraints = []
     for attr in sensitive_attrs_to_cov_thresh.keys():
-
         attr_arr = x_control_train[attr]
         attr_arr_transformed, index_dict = ut.get_one_hot_encoding(attr_arr)
                 
@@ -227,6 +227,8 @@ def get_constraint_list_cov(x_train, y_train, x_control_train, sensitive_attrs_t
                 cts = [1,2]
             elif cons_type in [0,1,2]:
                 cts = [cons_type]
+            elif cons_type == 3: #all constraints
+                cts = [0,1,2]
             
             else:
                 raise Exception("Invalid constraint type")
@@ -248,19 +250,18 @@ def get_constraint_list_cov(x_train, y_train, x_control_train, sensitive_attrs_t
             raise Exception("Fill the constraint code for categorical sensitive features... Exiting...")
             sys.exit(1)
             
-
+    print(len(constraints))
     return constraints
 
 
 def get_fpr_fnr_sensitive_features(y_true, y_pred, x_control, sensitive_attrs, verbose = False):
 
-
-
     # we will make some changes to x_control in this function, so make a copy in order to preserve the origianl referenced object
+    
     x_control_internal = deepcopy(x_control)
 
     s_attr_to_fp_fn = {}
-    
+
     for s in sensitive_attrs:
         s_attr_to_fp_fn[s] = {}
         s_attr_vals = x_control_internal[s]
@@ -269,9 +270,7 @@ def get_fpr_fnr_sensitive_features(y_true, y_pred, x_control, sensitive_attrs, v
         for s_val in sorted(list(set(s_attr_vals))):
             s_attr_to_fp_fn[s][s_val] = {}
             y_true_local = y_true[s_attr_vals==s_val]
-            y_pred_local = y_pred[s_attr_vals==s_val]
-
-            
+            y_pred_local = y_pred[s_attr_vals==s_val]            
 
             acc = float(sum(y_true_local==y_pred_local)) / len(y_true_local)
 
@@ -288,7 +287,6 @@ def get_fpr_fnr_sensitive_features(y_true, y_pred, x_control, sensitive_attrs, v
             tpr = float(tp) / float(tp + fn)
             tnr = float(tn) / float(tn + fp)
 
-
             s_attr_to_fp_fn[s][s_val]["fp"] = fp
             s_attr_to_fp_fn[s][s_val]["fn"] = fn
             s_attr_to_fp_fn[s][s_val]["fpr"] = fpr
@@ -300,8 +298,7 @@ def get_fpr_fnr_sensitive_features(y_true, y_pred, x_control, sensitive_attrs, v
                     s_val = int(s_val)
                 print "||  %s  || %0.2f || %0.2f ||" % (s_val, fpr, fnr)
 
-        
-        return s_attr_to_fp_fn
+    return s_attr_to_fp_fn
 
 
 def get_sensitive_attr_constraint_fpr_fnr_cov(model, x_arr, y_arr_true, y_arr_dist_boundary, x_control_arr, verbose=False):
